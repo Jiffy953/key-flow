@@ -16,15 +16,26 @@ interface KeyboardData {
 
 const UNIT_SIZE = 60;
 
+function safeLabel(label: any): string {
+  if (typeof label === 'string') {
+    return label.toLowerCase();
+  }
+  return '';
+}
+
 async function loadAndDisplayKeymap() {
   try {
     const keyboardData = await (window as any).electron.loadKeyboardData() as KeyboardData;
+    
+    if (!keyboardData) {
+      throw new Error('Failed to load keyboard data');
+    }
+
     const layoutSelector = document.getElementById('layout-selector') as HTMLSelectElement;
     const container = document.getElementById('keymap-container');
 
     if (!container || !layoutSelector) {
-      console.error('Required elements not found');
-      return;
+      throw new Error('Required elements not found');
     }
 
     // Populate layout selector
@@ -47,6 +58,7 @@ async function loadAndDisplayKeymap() {
         keyElement.style.top = `${key.y * UNIT_SIZE}px`;
         keyElement.style.width = `${(key.w || 1) * UNIT_SIZE - 2}px`;
         keyElement.style.height = `${(key.h || 1) * UNIT_SIZE - 2}px`;
+        keyElement.dataset.key = safeLabel(key.label);
         container.appendChild(keyElement);
       });
     }
@@ -57,8 +69,30 @@ async function loadAndDisplayKeymap() {
 
     // Initial render
     renderLayout(layoutSelector.value);
+
+    // Handle keyboard events
+    document.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+      const keyElement = container.querySelector(`[data-key="${key}"]`) as HTMLElement;
+      if (keyElement) {
+        keyElement.classList.add('pressed');
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      const key = e.key.toLowerCase();
+      const keyElement = container.querySelector(`[data-key="${key}"]`) as HTMLElement;
+      if (keyElement) {
+        keyElement.classList.remove('pressed');
+      }
+    });
+
   } catch (error) {
     console.error('Error loading keymap:', error);
+    const container = document.getElementById('keymap-container');
+    if (container) {
+      container.innerHTML = `<p>Error loading keymap: ${error.message}</p>`;
+    }
   }
 }
 

@@ -21,4 +21,9 @@ body {
   align-items: center;
   font-size: 12px;
   user-select: none;
+  transition: background-color 0.1s;
+}
+
+.key.pressed {
+  background-color: #ff9900;
 }
